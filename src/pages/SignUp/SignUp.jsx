@@ -4,6 +4,7 @@ import useAuth from '../../hooks/useAuth'
 import { toast } from 'react-hot-toast'
 import { TbFidgetSpinner } from 'react-icons/tb'
 import { useForm } from 'react-hook-form'
+import axios from 'axios'
 
 const SignUp = () => {
   const { createUser, updateUserProfile, signInWithGoogle, loading } = useAuth()
@@ -16,9 +17,46 @@ const SignUp = () => {
    const {
     register,
     handleSubmit,
-    watch,
+  
     formState: { errors },
   } = useForm()
+  console.log(errors)
+
+  const onSubmit = async data =>{
+    const {name, image, email, password} = data
+
+    const imageFile = image[0]
+    // console.log(imageFile)
+    const formData = new FormData()
+    formData.append('image', imageFile)
+   
+
+      try {
+
+      const {data} = await axios.post(
+        `https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_API_KEY}`,
+      formData
+    )
+
+    const imageURL = data?.data?.display_url
+
+      //1. User Registration
+      const result = await createUser(email, password)
+
+      // 2. Generate image url from selected file
+
+      //3. Save username & profile photo
+      await updateUserProfile( name, imageURL)
+      console.log(result)
+
+      navigate(from, { replace: true })
+      toast.success('Signup Successful')
+    } catch (err) {
+      console.log(err)
+      toast.error(err?.message)
+    }
+  }
+  
 
   // form submit handler
   // const handleSubmit = async event => {
@@ -60,15 +98,16 @@ const SignUp = () => {
       toast.error(err?.message)
     }
   }
-  return (
-    <div className='flex justify-center items-center min-h-screen bg-white'>
+
+ return(
+   <div className='flex justify-center items-center min-h-screen bg-white'>
       <div className='flex flex-col max-w-md p-6 rounded-md sm:p-10 bg-gray-100 text-gray-900'>
         <div className='mb-8 text-center'>
           <h1 className='my-3 text-4xl font-bold'>Sign Up</h1>
           <p className='text-sm text-gray-400'>Welcome to PlantNet</p>
         </div>
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           noValidate=''
           action=''
           className='space-y-6 ng-untouched ng-pristine ng-valid'
@@ -80,13 +119,18 @@ const SignUp = () => {
               </label>
               <input
                 type='text'
-                name='name'
                 id='name'
                 placeholder='Enter Your Name Here'
                 className='w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-lime-500 bg-gray-200 text-gray-900'
                 data-temp-mail-org='0'
-                {...register('name', {required: 'name is required'})}
+                {...register('name', {required: 'name is required', maxLength:{
+                  value: 20,
+                  message: 'Name cannot be to long'
+                } 
+
+                })}
               />
+              {errors.name && <p className='text-red-500 text-xs mt-1'>{errors.name.message}</p>}
             </div>
             {/* Image */}
             <div>
@@ -122,14 +166,18 @@ const SignUp = () => {
               </label>
               <input
                 type='email'
-                name='email'
                 id='email'
-                required
                 placeholder='Enter Your Email Here'
                 className='w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-lime-500 bg-gray-200 text-gray-900'
                 data-temp-mail-org='0'
-                {...register('email', {required: 'email is required'})}
+                {...register('email', {required: 'email is required', 
+                  pattern: {
+                    value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+                    message: 'Please enter a valid email address'
+                  }
+                })}
               />
+              {errors.email && <p className='text-red-500 text-xs mt-1'>{errors.email.message}</p>}
             </div>
             <div>
               <div className='flex justify-between'>
@@ -139,14 +187,16 @@ const SignUp = () => {
               </div>
               <input
                 type='password'
-                name='password'
                 autoComplete='new-password'
                 id='password'
-                required
                 placeholder='*******'
                 className='w-full px-3 py-2 border rounded-md border-gray-300 focus:outline-lime-500 bg-gray-200 text-gray-900'
-                {...register('password', {required: 'name is required'})}
+                {...register('password', {required: 'password is required', minLength:{
+                  value: 6,
+                  message: 'Password must be at least 6 character'
+                }})}
               />
+              {errors.password && <p className='text-red-500 text-xs mt-1'>{errors.password.message}</p>}
             </div>
           </div>
 
@@ -190,7 +240,7 @@ const SignUp = () => {
         </p>
       </div>
     </div>
-  )
+ )
 }
 
 export default SignUp
